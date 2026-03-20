@@ -6,27 +6,29 @@
 
 ## Introduction
 
-In competitive League of Legends, games are often decided long before they end. Professional players and analysts widely believe that the first 10 minutes — the "early game" — set the trajectory for the entire match. But how much does an early lead actually matter? **Can we predict whether a player's team wins a match using only stats available at 10 minutes into the game?**
+The dataset used is the 2022 League of Legends Esports Match Data from Oracle's Elixir, which tracks professional match statistics across major leagues globally. This year was specifically chosen because both team members were heavily active in the game at the time. 
 
-This question matters because understanding the predictive power of early-game stats has real implications for how teams draft, coach, and strategize. If a gold lead at 10 minutes is a near-certain predictor of victory, teams should prioritize early-game compositions. If not, late-game scaling may be undervalued.
+In League of Legends, games are often decided long before they end. When a player performs well early on in the game, a 'snowball' effect can often be seen as the gap between players grow over time. Many believe that the "early game" of a player's performance gives enough information to set the trajectory for the entire match. How much does an early lead actually matter? **Can we predict whether a player's team wins a match using only stats available at 10 minutes into the game?**
 
-We use the **2022 League of Legends Esports Match Data** from [Oracle's Elixir](https://oracleselixir.com/), which tracks professional match statistics across major global leagues. The full dataset has **148,980 rows and 165 columns**, where each game corresponds to 12 rows (10 player rows + 2 team-summary rows). After filtering to player-level rows only, we work with **124,150 rows** representing individual player performances across **12,415 games**.
+This question is crucial because understanding the importance of early-game stats has a large impact on how teams draft, strategize, and play. For example, if a gold lead at 10 minutes is a strong predictor of winning the game, teams should prioritize early-game resources. Otherwise, late game scaling should be a priority.
+
+
 
 ### Relevant Columns
 
 | Column | Description |
 |--------|-------------|
 | `result` | Whether the player's team won the match (`True` = win, `False` = loss) |
-| `position` | The player's role: `top`, `jng` (jungle), `mid`, `bot` (ADC), or `sup` (support) |
+| `position` | Player's role: `top`, `jng` (jungle), `mid`, `bot` (ADC), or `sup` (support) |
 | `side` | Which side of the map the team started on: `Blue` or `Red` |
 | `playoffs` | Whether the match was played in a playoff setting (`True`/`False`) |
 | `gamelength` | Total game duration in seconds |
-| `kills` | Total kills by the player during the match |
-| `deaths` | Total deaths by the player during the match |
-| `assists` | Total assists by the player during the match |
+| `kills` | Player's total kills |
+| `deaths` | Player's total deaths |
+| `assists` | Player's total assists |
 | `dpm` | Damage per minute dealt to enemy champions |
-| `goldat10` | Gold earned by the player at exactly 10 minutes |
-| `xpat10` | Experience points accumulated by the player at 10 minutes |
+| `goldat10` | Gold earned at 10 minutes |
+| `xpat10` | Total experience points at 10 minutes |
 | `csat10` | Creep score (minion kills) at 10 minutes |
 | `killsat10` | Kills secured at 10 minutes |
 | `assistsat10` | Assists at 10 minutes |
@@ -41,13 +43,26 @@ We use the **2022 League of Legends Esports Match Data** from [Oracle's Elixir](
 
 ### Data Cleaning
 
-The original dataset has **148,980 rows and 165 columns**. Each game generates 12 rows: 10 for individual players and 2 for team summaries (`participantid` 100 or 200). Since our analysis focuses on player-level performance, we filter out the team rows, resulting in **124,150 rows**.
+The original dataset has 148,980 rows and 165 columns. Each game corresponds to 12 rows: 10 player rows and 2 for team summaries (`participantid` = 100 or 200). Since our analysis focuses on player-level performance, we will only look at and keep player rows, resulting in 124,150 rows.
 
-Several columns stored as `0`/`1` integers were converted to booleans for clarity: `playoffs`, `firstPick`, `result`, `firstblood`, `firstbloodkill`, `firstbloodassist`, and `firstbloodvictim`. This makes filtering and grouping more intuitive and prevents accidental numerical operations on binary flags.
+Many columns that consist of only `0` and `1`s are converted to booleans: `playoffs`, `firstPick`, `result`, `firstblood`, `firstbloodkill`, `firstbloodassist`, and `firstbloodvictim`. Having boolean variables helps prevent confusion with numerical calculations and makes the variables easier to use.
+
+### DataFrame Head
+
+There are over 100+ columns in the dataframe. This output of the first 5 rows only shows the columns we look at in our analysis.
+
+| result | position | side | playoffs | gamelength | kills | deaths | assists | dpm | goldat10 | xpat10 | csat10 | killsat10 | assistsat10 | deathsat10 | golddiffat10 | xpdiffat10 | csdiffat10 |
+|--------|----------|------|----------|------------|-------|--------|---------|--------|----------|--------|--------|-----------|-------------|------------|--------------|------------|------------|
+| False | top | Blue | False | 1713 | 2 | 3 | 2 | 552.29 | 3228.0 | 4909.0 | 89.0 | 0.0 | 0.0 | 0.0 | 52.0 | -44.0 | 8.0 |
+| False | jng | Blue | False | 1713 | 2 | 5 | 6 | 412.08 | 3429.0 | 3484.0 | 58.0 | 1.0 | 2.0 | 0.0 | 485.0 | 432.0 | -5.0 |
+| False | mid | Blue | False | 1713 | 2 | 2 | 3 | 499.40 | 3283.0 | 4556.0 | 81.0 | 0.0 | 1.0 | 0.0 | 162.0 | 71.0 | 0.0 |
+| False | bot | Blue | False | 1713 | 2 | 4 | 2 | 389.00 | 3600.0 | 3103.0 | 78.0 | 1.0 | 1.0 | 0.0 | 296.0 | 265.0 | -12.0 |
+| False | sup | Blue | False | 1713 | 1 | 5 | 6 | 128.30 | 2678.0 | 2161.0 | 16.0 | 1.0 | 1.0 | 0.0 | 528.0 | -587.0 | 1.0 |
+
 
 ### Univariate Analysis
 
-The distribution of game lengths shows that most professional matches last between 1,500–2,400 seconds (~25–40 minutes), with a right-skewed tail of unusually long games.
+The distribution of game lengths shows most matches last between 1,400–2,300 seconds (~25–40 minutes), with a right-skewed tail of some unusually long games.
 
 <iframe
   src="assets/fig_gamelength.html"
@@ -56,7 +71,7 @@ The distribution of game lengths shows that most professional matches last betwe
   frameborder="0"
 ></iframe>
 
-Kill counts per player are heavily right-skewed — most players record 0–5 kills per game, consistent with the controlled, objective-focused nature of professional play.
+The distribution of kills is skewed to the right with most players recording 0–5 kills per game. This matches with the controlled, objective-focused mindset in professional play.
 
 <iframe
   src="assets/fig_kills.html"
@@ -67,7 +82,7 @@ Kill counts per player are heavily right-skewed — most players record 0–5 ki
 
 ### Bivariate Analysis
 
-Teams that secure First Blood win at a noticeably higher rate than those that don't, suggesting early combat advantages translate into game outcomes.
+Teams that secure First Blood have a much higher win rate than those that don't. This suggests that early combat wins contribute greatly to snowballing.
 
 <iframe
   src="assets/fig_winrate_firstblood.html"
@@ -78,7 +93,7 @@ Teams that secure First Blood win at a noticeably higher rate than those that do
 
 ### Interesting Aggregates
 
-Average combat stats grouped by position reveal a clear role hierarchy. Bot and mid laners lead in damage per minute (DPM), consistent with their damage-focused role. Supports have the highest assists and lowest kills, while junglers rack up the most assists of any carry role.
+The averages of basic game stats grouped by position show different patterns for each role. Bot and mid laners lead in damage per minute (DPM), lining up with their damage-focused role. Supports have the highest assists and lowest kills, while junglers are spread across the stats.
 
 | position | kills | deaths | assists | dpm | win_rate |
 |----------|-------|--------|---------|-----|----------|
@@ -88,7 +103,7 @@ Average combat stats grouped by position reveal a clear role hierarchy. Bot and 
 | jng | 3.04 | 3.11 | 6.85 | 324.15 | 0.5 |
 | sup | 0.87 | 3.24 | 9.17 | 171.86 | 0.5 |
 
-All positions have a 50% win rate by construction (every game has one winner and one loser), confirming the dataset is balanced.
+All positions have a 50% win rate by default due to the nature of our dataset (every game has one winner and one loser).
 
 ---
 
@@ -96,13 +111,13 @@ All positions have a 50% win rate by construction (every game has one winner and
 
 ### MNAR Analysis
 
-We believe the **`ban1` through `ban5`** columns (champion bans) are **MNAR** (Missing Not At Random). In the dataset, ban data is absent for certain matches — and crucially, this missingness cannot be fully explained by any other observed column. The bans are missing not because of the league, patch, or game outcome, but because those particular matches were played in non-standard formats or recorded under incomplete data collection pipelines. The absence of ban data is tied to unobserved characteristics of the match's recording context (e.g., whether a tournament organizer used the full OraclesElixir data feed), which is not captured elsewhere in the dataset. To confirm this, we would need metadata about each match's data-collection method — information not present in any observed column.
+We believe the missing `ban` (1-5) columns (champion bans) are MNAR (Missing Not At Random). In the dataset, ban data is absent for certain matches and cannot be fully explained by any other column. The absence of ban data could be tied to game strategy, error in collection, or other unpredictable conditions that cannot be traced to the other information given in the dataset. To confirm this, we would need metadata on how the data is collected for each game, which is information we don't have. 
 
 ### Missingness Dependency: `goldat10`
 
-The `goldat10` column (gold earned at the 10-minute mark) is missing in **15.2% of player rows**, because certain leagues don't record 10-minute snapshots. We tested whether this missingness depends on other columns using permutation tests with test statistic |difference in missingness rates| at **α = 0.05**.
+The `goldat10` column (and other columns measuring staitstics at 10 minutes) is missing in many of rows, because certain leagues don't track statistics at the 10-minute mark. We tested whether this missingness depends on other columns using permutation tests. The test statistic used is |difference in missingness| at a = 0.05.
 
-**Depends on `playoffs`** (p ≈ 0.0000): Playoff games have significantly different missingness rates for `goldat10` than regular season games. This makes sense — leagues that track detailed time-series stats are more likely to do so consistently in high-stakes playoff matches.
+**Depends on `playoffs`** (p = 0.0000): Playoff games have significantly different missingness rates for `goldat10` than regular season games. This makes sense because leagues that track detailed time statistics are more likely to do so consistently in high-stakes playoff matches.
 
 <iframe
   src="assets/fig_missingness_playoffs.html"
@@ -111,7 +126,7 @@ The `goldat10` column (gold earned at the 10-minute mark) is missing in **15.2% 
   frameborder="0"
 ></iframe>
 
-**Does not depend on `side`** (p = 1.0000): Which side of the map a team plays on has no relationship to whether `goldat10` is missing, as expected — map side is unrelated to data collection practices.
+**Does not depend on `side`** (p = 1.0000): Which side of the map a team plays on has no relationship to whether `goldat10` is missing. This is expected as map side is unrelated to how is collected.
 
 <iframe
   src="assets/fig_missingness_side.html"
@@ -124,19 +139,17 @@ The `goldat10` column (gold earned at the 10-minute mark) is missing in **15.2% 
 
 ## Hypothesis Testing
 
-Bot laners (ADCs) and mid laners are both considered primary damage dealers, but the community often debates which role truly does more damage. We test this directly.
+Bot laners (ADCs) and mid laners are both considered the main damage dealers, but it's often debated which has a greater impact in the game. We test this by looking at damage per minute.  
 
-**Null Hypothesis (H₀):** The distribution of damage per minute (DPM) is the same for ADC (bot) and mid laners. Any observed difference is due to random chance.
+**Null Hypothesis (H0):** The distribution of damage per minute (DPM) is the same for ADC (bot) and mid laners. Any observed difference is due to random chance.
 
-**Alternative Hypothesis (H₁):** ADC players deal more damage per minute than mid laners on average.
+**Alternative Hypothesis (H1):** ADC players deal more damage per minute than mid laners on average.
 
-**Test Statistic:** Difference in group means: mean DPM(bot) − mean DPM(mid). Positive values favor H₁.
+**Test Statistic:** Difference in group means: mean DPM(bot) − mean DPM(mid). Positive values will favor H1.
 
-**Significance Level:** α = 0.05
+After running a permutation test with 5,000 shuffles. The observed difference was 14.90 DPM, and the resulting p-value was ≈ 0.0000.
 
-We ran a permutation test with 10,000 shuffles. The observed difference was **+14.90 DPM**, and the resulting **p-value was ≈ 0.0000** — far below our threshold.
-
-**Conclusion:** We reject H₀. The data provides strong evidence that ADC players deal more damage per minute than mid laners on average in professional 2022 play. This is consistent with ADCs building sustained damage items and fighting from a safe distance throughout fights, while mid laners often play more utility-oriented or roam-heavy styles. Note that this result does not prove ADCs are "better" — it reflects a difference in role function, not overall impact.
+**Conclusion:** We reject the null hypothesis. The data provides strong statistical evidence that ADC players deal more damage per minute than mid laners on average in professional play. This is consistent with ADCs building damage focused items and spending a majority of times fighting players in lane, while mid laners often play with more versatility and roam. This result does not prove ADCs are a more important role but rather reflects a difference in role function.
 
 <iframe
   src="assets/fig_hypothesis.html"
@@ -149,16 +162,16 @@ We ran a permutation test with 10,000 shuffles. The observed difference was **+1
 
 ## Framing a Prediction Problem
 
-**Prediction Problem:** Can we predict whether a player's team wins a match using only stats available at 10 minutes into the game?
+**Prediction Problem:** Can we predict whether a player's team wins a match using only the player's stats available at 10 minutes into the game?
 
 **Type:** Binary Classification
 **Response Variable:** `result` — `True` (win) or `False` (loss)
 
-We chose `result` as the response variable because winning is the ultimate objective of every match, and predicting it from early-game data directly answers our central question.
+We chose `result` as the response variable because it is the end objective of every match. Predicting it from early-game data directly answers our central question.
 
 **Evaluation Metric:** Accuracy
 
-We use accuracy because the dataset is perfectly balanced (every game has exactly one winning and one losing team per side), so there is no class imbalance issue. Accuracy directly measures how often the model correctly calls the outcome, which aligns with our question. Precision or recall would matter more in imbalanced settings, but here they reduce to accuracy anyway.
+We use accuracy because the dataset is balanced (every game has exactly one winning and one losing team per side), so there is no class imbalance issue. Accuracy directly measures how often the model correctly calls the outcome, which aligns with our question. Precision or recall would be more appropriate in an imbalanced settings.
 
 **Time of Prediction Constraint:** We only use features available at exactly the 10-minute mark — `goldat10`, `xpat10`, `killsat10`, `assistsat10`, `deathsat10`, `csat10`, and `position`. Post-game stats like total kills, DPM, or final gold are excluded to prevent data leakage.
 
@@ -168,17 +181,17 @@ We use accuracy because the dataset is perfectly balanced (every game has exactl
 
 ### Model & Features
 
-The baseline model is a **Logistic Regression** trained on six quantitative features and one nominal feature, all implemented in a single `sklearn` Pipeline:
+The baseline model is a **Logistic Regression** trained on six quantitative features and one nominal feature, all implemented in a single Pipeline:
 
-| Feature | Type | Encoding |
-|---------|------|----------|
-| `goldat10` | Quantitative | None (used as-is) |
-| `xpat10` | Quantitative | None |
-| `killsat10` | Quantitative | None |
-| `assistsat10` | Quantitative | None |
-| `deathsat10` | Quantitative | None |
-| `csat10` | Quantitative | None |
-| `position` | Nominal | One-hot encoding (drop first) |
+| Feature | Type |
+|---------|------|
+| `goldat10` | Quantitative |
+| `xpat10` | Quantitative |
+| `killsat10` | Quantitative |
+| `assistsat10` | Quantitative |
+| `deathsat10` | Quantitative |
+| `csat10` | Quantitative |
+| `position` | Nominal |
 
 `position` is one-hot encoded because it is a categorical variable with no natural ordering. The numeric features are left as-is since Logistic Regression can handle them directly.
 
@@ -190,7 +203,7 @@ The baseline model is a **Logistic Regression** trained on six quantitative feat
 | Test | **58.82%** |
 | Naive baseline (always predict win) | 50.00% |
 
-The baseline achieves **58.82% test accuracy**, a ~9 percentage point improvement over always guessing "win." This suggests the 10-minute stats do carry meaningful signal — but there is substantial room for improvement, since the model is only moderately better than chance.
+The baseline achieves **58.82% test accuracy**, a ~9 percentage point improvement over always guessing "win." This suggests the 10-minute stats do carry meaningful significance but the model is only moderately better than chance.
 
 ---
 
@@ -198,22 +211,19 @@ The baseline achieves **58.82% test accuracy**, a ~9 percentage point improvemen
 
 ### Engineered Features
 
-Three new features were added to capture information that the raw stats miss:
+Three new features were engineered and added to capture information that the raw stats miss:
 
 **1. KDA at 10** = `(killsat10 + assistsat10) / (deathsat10 + 1)`
-The baseline uses kills, assists, and deaths as separate linear inputs. KDA collapses them into a single combat-efficiency ratio, which better captures what matters: how much a player contributed relative to how much they fed the enemy. Dividing by `deathsat10 + 1` avoids division by zero for players who haven't died yet.
+The baseline uses kills, assists, and deaths as separate inputs. KDA combines them into a single combat-efficiency stat, which captures how much a player contributed relative to how much they fed the enemy. Dividing by `deathsat10 + 1` avoids division by zero for players who haven't died yet.
 
 **2. Resource Lead Score** = `z(golddiffat10) + z(csdiffat10)`
-Both `golddiffat10` and `csdiffat10` measure lane dominance, but their raw scales differ by ~34×. Summing them directly effectively discards the CS component. We z-score each independently before summing so both dimensions of resource advantage contribute equally. A player winning both gold *and* CS should be penalized more strongly than winning just one.
-
-**3. XP Lead Ratio** = `xpdiffat10 / (xpat10 + 1)`
-Raw `xpdiffat10` measures the absolute XP gap, but a +200 XP lead is far more meaningful at low levels than at high levels (when both players have accumulated thousands of XP). Dividing by the player's total XP normalizes the advantage to a fraction of their own experience pool, capturing *relative* level dominance.
+Both `golddiffat10` and `csdiffat10` measure lane dominance using gold, a key indicator. However their raw size differs by over 30×. Summing them directly effectively discards the CS component. Therefore, we z-score each stat independently before summing so both resource advantages contribute equally. A player winning both should be rewarded higher than if they just won one.
 
 We also retained the raw diff columns (`golddiffat10`, `xpdiffat10`, `csdiffat10`) alongside the engineered features.
 
 ### Algorithm & Hyperparameter Tuning
 
-We used a **Random Forest Classifier**, which captures non-linear interactions between features that Logistic Regression cannot. We tuned three hyperparameters via `GridSearchCV` with 5-fold cross-validation on the training set:
+We used a **Random Forest Classifier**, which captures non-linear interactions between features that Logistic Regression can't. We also use 'GridSearchCV' with 5-fold cross-validation on the training data:
 
 | Hyperparameter | Values Searched | Best Value |
 |----------------|----------------|------------|
@@ -221,17 +231,17 @@ We used a **Random Forest Classifier**, which captures non-linear interactions b
 | `max_depth` | 5, 10, None | 10 |
 | `min_samples_leaf` | 1, 5, 10 | 1 |
 
-`max_depth=10` prevents the trees from overfitting to noise while still capturing complex feature interactions. `min_samples_leaf=1` allows fine-grained splits, which works well given the large training set (~84k rows).
+`max_depth=10` prevents the trees from overfitting while still capturing complex feature interactions. `min_samples_leaf=1` allows fine-grained splits, which works well given the large training set.
 
 ### Performance
 
 | Model | Test Accuracy |
 |-------|--------------|
 | Baseline (Logistic Regression) | 58.82% |
-| **Final (Random Forest)** | **60.99%** |
+| Final (Random Forest) | 60.99% |
 | Improvement | +2.17 pp |
 
-The final model improves over the baseline by **+2.17 percentage points** on held-out test data (same train/test split used throughout). The CV score of 61.14% is close to the test score, indicating the model generalizes well and is not overfitting.
+The final model improves over the baseline by +2.17 percent on the same train/test split used in the baseline. The score of 61.14% is close to the test score, indicating the model generalizes the data well and isn't overfitting.
 
 ---
 
@@ -240,14 +250,13 @@ The final model improves over the baseline by **+2.17 percentage points** on hel
 **Groups:** Blue side players vs. Red side players
 **Evaluation Metric:** Accuracy
 
-In competitive League of Legends, blue side picks first in champion select, granting structural agency over team composition. If the model implicitly learned blue-side patterns better (since blue-side early leads may translate more consistently to wins), it could produce systematically higher accuracy for blue-side players.
+In League of Legends, blue side picks first in champion select, granting an edge in team composition. Also the layout for both sides are structurally different (like the jungle layout). If the model implicitly learned blue-side patterns better (since blue-side early leads may translate to more wins), it could produce higher accuracy for blue-side players.
 
-**Null Hypothesis (H₀):** The model is fair with respect to side. Its accuracy for blue side and red side players are roughly the same, and any observed difference is due to random chance.
+**Null Hypothesis (H₀):** The model is fair with respect to both side. Any observed difference is due to random chance.
 
-**Alternative Hypothesis (H₁):** The model is unfair — its accuracy for blue side players is *higher* than for red side players.
+**Alternative Hypothesis (H₁):** The model is unfair. Its accuracy for blue side players is higher than for red side players.
 
-**Test Statistic:** Accuracy(Blue) − Accuracy(Red). Positive values favor H₁.
-**Significance Level:** α = 0.05
+**Test Statistic:** Blue Accuracy − Red Accuracy
 
 | Group | Accuracy |
 |-------|----------|
@@ -256,7 +265,7 @@ In competitive League of Legends, blue side picks first in champion select, gran
 | Observed difference | +0.0038 |
 | p-value (one-sided) | 0.2863 |
 
-**Conclusion:** We fail to reject H₀ (p = 0.2863 ≥ 0.05). The observed +0.38 percentage point accuracy gap between blue and red side is consistent with random variation. We have no statistically significant evidence that the model is unfair with respect to map side.
+**Conclusion:** We fail to reject H₀ (p = 0.2863 ≥ 0.05). The observed +0.38 percentage point accuracy gap between blue and red side is consistent with it being random. Therefore, we have no statistically significant evidence that the model is unfair with respect to map side.
 
 <iframe
   src="assets/fig_fairness.html"

@@ -115,7 +115,7 @@ We believe the missing `ban` (1-5) columns (champion bans) are MNAR (Missing Not
 
 ### Missingness Dependency: `goldat10`
 
-The `goldat10` column (and other columns measuring staitstics at 10 minutes) is missing in many of rows, because certain leagues don't track statistics at the 10-minute mark. We tested whether this missingness depends on other columns using permutation tests. The test statistic used is |difference in missingness| at a = 0.05.
+The `goldat10` column (and other columns measuring staitstics at 10 minutes) is missing in many of rows, because certain leagues don't track statistics at the 10-minute mark. We tested whether this missingness depends on other columns using permutation tests. The test statistic used is abs(difference in missingness) at a = 0.05.
 
 **Depends on `playoffs`** (p = 0.0000): Playoff games have significantly different missingness rates for `goldat10` than regular season games. This makes sense because leagues that track detailed time statistics are more likely to do so consistently in high-stakes playoff matches.
 
@@ -247,10 +247,11 @@ The final model improves over the baseline by +2.17 percent on the same train/te
 
 ## Fairness Analysis
 
-**Groups:** Blue side players vs. Red side players
-**Evaluation Metric:** Accuracy
-
 In League of Legends, blue side picks first in champion select, granting an edge in team composition. Also the layout for both sides are structurally different (like the jungle layout). If the model implicitly learned blue-side patterns better (since blue-side early leads may translate to more wins), it could produce higher accuracy for blue-side players.
+
+**Groups:** Blue side players vs. Red side players
+
+**Evaluation Metric:** Accuracy
 
 **Null Hypothesis (H₀):** The model is fair with respect to both side. Any observed difference is due to random chance.
 
